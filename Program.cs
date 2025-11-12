@@ -1,34 +1,44 @@
-﻿using DotNetCoreSqlDb.Models;
+using DotNetCoreSqlDb.Models;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Azure logging (already fine)
 builder.Logging.AddAzureWebAppDiagnostics();
 
-// Add services to the container.
+// Add services to the container
 builder.Services.AddControllersWithViews();
 
+// Configure SQL Database Connection
+// It will automatically use the connection string from Azure App Service
+var connectionString = builder.Configuration.GetConnectionString("MyDbConnection");
+
 builder.Services.AddDbContext<MyDatabaseContext>(options =>
-                    options.UseSqlite("Data Source=localdatabase.db"));
+    options.UseSqlServer(connectionString));
+
+// Automatically apply migrations on startup
+using (var scope = builder.Services.BuildServiceProvider().CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<MyDatabaseContext>();
+    db.Database.Migrate();
+}
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
-else {
+else
+{
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 // app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthorization();
 
 app.MapControllerRoute(
